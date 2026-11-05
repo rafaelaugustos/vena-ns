@@ -6,7 +6,7 @@ export class HeartScene extends View {
   setRunning(_running: boolean) {}
   setReveal(_progress: number, _duration = 0) {}
   setFocus(_focused: boolean) {}
-  touchAt(_x: number, _y: number, _active: boolean) {}
+  tapAt(_x: number, _y: number) {}
   pointerAt(_x: number, _y: number, _active: boolean) {}
   setInteractionEnabled(_enabled: boolean) {}
   resetPose() {}

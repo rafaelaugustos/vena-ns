@@ -26,6 +26,8 @@ npm run build:ios
 
 ## Pointer interaction
 
+Hover parts the torso's particles while the heart stays intact and keeps beating. Clicking or tapping the scene sends an expanding wave of light through the body. The wave also works while the rhythm is paused.
+
 The scene uses `UIHoverGestureRecognizer`: moving a pointer is enough; it does not depend on a tap or drag. Test this on an iPad simulator with pointer simulation enabled, or an iPad with a mouse or trackpad. An iPhone simulator's ordinary mouse input is emulated touch and does not produce the same hover events. See [Apple's hover recognizer documentation](https://developer.apple.com/documentation/uikit/uihovergesturerecognizer).
 
 For mouse hover in the **iPhone simulator**, run this in a second terminal after opening the app:
@@ -40,7 +42,7 @@ Android scaffolding is present from the initial setup; the current anatomy and v
 
 ## How it moves
 
-- SceneKit renders 72,500 anatomy points. Jolt's native shader properties drive formation, focus, rotation, pointer displacement and light.
+- SceneKit renders 72,500 anatomy points. Jolt's native shader properties drive formation, focus, rotation, torso displacement, lighting and the tap wave.
 - A repeating Jolt motion value drives the heartbeat. There is no JavaScript animation loop moving individual particles.
 - Jolt shapes draw the icons and LED signal. Timelines bring in the interface, while springs handle focus and control feedback.
 - Motion scopes own the animations. Backgrounding stops scene rendering, and Reduce Motion disables continuous movement. Pausing the rhythm still allows pointer and focus transitions.

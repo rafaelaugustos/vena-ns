@@ -11,6 +11,8 @@ interface Controls {
   touchPower: NativeProperty<number>
   touchPosition: NativeProperty<readonly [number, number, number]>
   orbit: NativeProperty<readonly [number, number]>
+  ripple: NativeProperty<number>
+  rippleOrigin: NativeProperty<readonly [number, number, number]>
 }
 
 function source(values: number[], semantic: string, components: number) {
@@ -42,8 +44,9 @@ function pointNode(cloud: PointCloud, isHeart: boolean, glow = false) {
   material.readsFromDepthBuffer = false
   material.writesToDepthBuffer = false
   material.shaderModifiers = NSDictionary.dictionaryWithObjectForKey(anatomyShader, SCNShaderModifierEntryPointGeometry)
-  for (const [key, value] of Object.entries({ formation: 0, beat: 0, isHeart: isHeart ? 1 : 0, focus: 1, touchPower: 0 })) material.setValueForKey(value, key)
+  for (const [key, value] of Object.entries({ formation: 0, beat: 0, isHeart: isHeart ? 1 : 0, focus: 1, touchPower: 0, ripple: 1 })) material.setValueForKey(value, key)
   material.setValueForKey(NSValue.valueWithSCNVector3({ x: 0, y: 0, z: 0 }), 'touchPosition')
+  material.setValueForKey(NSValue.valueWithSCNVector3({ x: 0, y: 0, z: 0 }), 'rippleOrigin')
   material.setValueForKey(NSValue.valueWithCGPoint(CGPointMake(0, 0)), 'orbit')
   geometry.materials = NSArray.arrayWithObject(material)
   return { node: SCNNode.nodeWithGeometry(geometry), material }
@@ -98,7 +101,7 @@ export class HeartScene extends View {
     super.onLoaded()
     this.accessibilityHidden = true
     const scope = this.scope = motionScope()
-    this.removePointer = observePointer(this, (x, y, active) => this.pointerAt(x, y, active))
+    this.removePointer = observePointer(this, (x, y, active) => this.pointerAt(x, y, active), (x, y) => this.tapAt(x, y))
     for (const material of this.materials) {
       const own = <T extends { dispose(): void }>(property: T): T => { this.properties.push(property); return property }
       const scalar = (name: string, range: readonly [number, number] = [0, 1]) => own(sceneKitUniform(material, name, { type: 'float', range, units: ['fraction'], motion: 'spatial' }))
@@ -108,6 +111,8 @@ export class HeartScene extends View {
         formation: scalar('formation'), focus: scalar('focus'), touchPower: scalar('touchPower'),
         touchPosition: own(sceneKitUniform(material, 'touchPosition', { type: 'float3', range: [-4, 4], units: ['x', 'y', 'z'], motion: 'spatial' })),
         orbit: own(sceneKitUniform(material, 'orbit', { type: 'float2', range: [-.65, .65], units: ['radians', 'radians'], motion: 'spatial' })),
+        ripple: scalar('ripple'),
+        rippleOrigin: own(sceneKitUniform(material, 'rippleOrigin', { type: 'float3', range: [-4, 4], units: ['x', 'y', 'z'], motion: 'spatial' })),
       })
     }
     this.controls.forEach(control => { control.formation.set(this.revealed); control.focus.set(this.focused ? 1 : 0) })
@@ -154,6 +159,22 @@ export class HeartScene extends View {
     this.controls.forEach(control => this.scope?.add(control.focus.animate(focused ? 1 : 0, { type: 'spring', duration: 950, bounce: .05 })))
   }
   setInteractionEnabled(enabled: boolean) { this.interactionEnabled = enabled; if (!enabled) this.pointerAt(0, 0, false) }
+  private scenePoint(x: number, y: number): readonly [number, number, number] | undefined {
+    const { width, height } = this.getActualSize()
+    if (!width || !height) return
+    return [(x - width / 2) * 3.24 / height, (.5 - y / height) * 3.24 + .03, .35]
+  }
+  tapAt(x: number, y: number) {
+    if (!this.interactionEnabled || this.backgrounded || reducedMotion()) return
+    const point = this.scenePoint(x, y)
+    if (!point || !this.scope) return
+    this.renderFor(950)
+    for (const control of this.controls) {
+      control.rippleOrigin.set(point)
+      control.ripple.set(0)
+      this.scope.add(control.ripple.animate(1, { duration: 850, ease: 'linear' }))
+    }
+  }
   pointerAt(x: number, y: number, active: boolean) {
     active = active && this.interactionEnabled
     const changed = active !== this.pointerActive
@@ -163,14 +184,12 @@ export class HeartScene extends View {
     }
     if (reducedMotion()) return
     this.renderFor(1300)
+    const point = this.scenePoint(x, y)
+    if (!point) return
     const size = this.getActualSize()
-    if (!size.width || !size.height) return
-    const worldHeight = 3.24
-    const px = (x / size.width - .5) * worldHeight * size.width / size.height
-    const py = (.5 - y / size.height) * worldHeight + .03
     for (const control of this.controls) {
       if (active) {
-        this.scope?.add(control.touchPosition.animate([px, py, .35], { type: 'spring', duration: 190, bounce: 0 }))
+        this.scope?.add(control.touchPosition.animate(point, { type: 'spring', duration: 190, bounce: 0 }))
         this.scope?.add(control.orbit.animate([(x / size.width - .5) * .12, (y / size.height - .5) * .05], { type: 'spring', stiffness: 100, damping: 22 }))
       }
       if (changed) this.scope?.add(control.touchPower.animate(active ? 1 : 0, { type: 'spring', duration: active ? 220 : 850, bounce: active ? 0 : .06 }))
