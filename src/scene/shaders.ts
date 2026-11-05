@@ -2,6 +2,7 @@ export const anatomyShader = `
 #pragma arguments
 float formation;
 float beat;
+float pulsePower;
 float isHeart;
 float focus;
 float touchPower;
@@ -16,6 +17,7 @@ float angle = seed * 6.2831853;
 float3 dispersed = float3(cos(angle), sin(angle), sin(angle * 3.0)) * (1.8 + seed * 1.6);
 p = mix(dispersed, p, formation);
 float3 center = float3(0.2, 0.42, 0.55);
+float3 heartPosition = center;
 float contraction = exp(-pow((beat - 0.17) / 0.095, 2.0)) + 0.38 * exp(-pow((beat - 0.39) / 0.085, 2.0));
 float3 pulseScale = float3(1.0 + contraction * 0.14, 1.0 + contraction * 0.075, 1.0 + contraction * 0.1);
 p = mix(p, center + (p - center) * pulseScale, isHeart);
@@ -23,8 +25,11 @@ float cx = cos(orbit.y), sx = sin(orbit.y);
 float cy = cos(orbit.x), sy = sin(orbit.x);
 p = float3(p.x, p.y * cx - p.z * sx, p.y * sx + p.z * cx);
 p = float3(p.x * cy + p.z * sy, p.y, -p.x * sy + p.z * cy);
+heartPosition = float3(heartPosition.x, heartPosition.y * cx - heartPosition.z * sx, heartPosition.y * sx + heartPosition.z * cx);
+heartPosition = float3(heartPosition.x * cy + heartPosition.z * sy, heartPosition.y, -heartPosition.x * sy + heartPosition.z * cy);
 float zoom = 1.0 + focus * 1.5;
 p = (p - center * focus * 0.95) * zoom;
+heartPosition = (heartPosition - center * focus * 0.95) * zoom;
 float body = 1.0 - isHeart;
 float3 delta = p - touchPosition;
 float d = length(delta.xy);
@@ -35,12 +40,18 @@ float2 tangent = float2(-direction.y, direction.x);
 // Only the torso parts around the cursor. The heart keeps its silhouette.
 p.xy += (direction * (0.075 + seed * 0.045) + tangent * (seed - 0.35) * 0.06) * influence;
 p.z += influence * (0.08 + seed * 0.12);
-// A click sends a short, expanding wave through the torso, independently of hover.
+// Each beat sends light out from the heart. Taps add a wave without resetting it.
+float beatPhase = clamp((beat - 0.17) / 0.8, 0.0, 1.0);
+float2 fromHeart = p.xy - heartPosition.xy;
+float pulseWave = exp(-pow((length(fromHeart) - beatPhase * 3.8) / 0.22, 2.0));
+pulseWave *= smoothstep(0.0, 0.035, beatPhase) * pow(1.0 - beatPhase, 1.4) * pulsePower * body;
 float2 fromImpact = p.xy - rippleOrigin.xy;
 float radius = ripple * 3.8;
-float wave = exp(-pow((length(fromImpact) - radius) / 0.18, 2.0));
-wave *= smoothstep(0.0, 0.035, ripple) * pow(1.0 - ripple, 1.4) * body;
-p.xy += normalize(fromImpact + float2(0.001)) * wave * (0.07 + seed * 0.05);
+float tapWave = exp(-pow((length(fromImpact) - radius) / 0.18, 2.0));
+tapWave *= smoothstep(0.0, 0.035, ripple) * pow(1.0 - ripple, 1.4) * body;
+float wave = min(1.0, pulseWave * 0.85 + tapWave);
+p.xy += normalize(fromImpact + float2(0.001)) * tapWave * (0.07 + seed * 0.05);
+p.xy += normalize(fromHeart + float2(0.001)) * pulseWave * 0.035;
 p.z += wave * (0.12 + seed * 0.1);
 _geometry.position.xyz = p;
 float neckFade = 1.0 - smoothstep(1.08, 1.48, _geometry.position.y);

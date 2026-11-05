@@ -13,6 +13,7 @@ interface Controls {
   orbit: NativeProperty<readonly [number, number]>
   ripple: NativeProperty<number>
   rippleOrigin: NativeProperty<readonly [number, number, number]>
+  pulsePower: NativeProperty<number>
 }
 
 function source(values: number[], semantic: string, components: number) {
@@ -44,7 +45,7 @@ function pointNode(cloud: PointCloud, isHeart: boolean, glow = false) {
   material.readsFromDepthBuffer = false
   material.writesToDepthBuffer = false
   material.shaderModifiers = NSDictionary.dictionaryWithObjectForKey(anatomyShader, SCNShaderModifierEntryPointGeometry)
-  for (const [key, value] of Object.entries({ formation: 0, beat: 0, isHeart: isHeart ? 1 : 0, focus: 1, touchPower: 0, ripple: 1 })) material.setValueForKey(value, key)
+  for (const [key, value] of Object.entries({ formation: 0, beat: 0, pulsePower: 0, isHeart: isHeart ? 1 : 0, focus: 1, touchPower: 0, ripple: 1 })) material.setValueForKey(value, key)
   material.setValueForKey(NSValue.valueWithSCNVector3({ x: 0, y: 0, z: 0 }), 'touchPosition')
   material.setValueForKey(NSValue.valueWithSCNVector3({ x: 0, y: 0, z: 0 }), 'rippleOrigin')
   material.setValueForKey(NSValue.valueWithCGPoint(CGPointMake(0, 0)), 'orbit')
@@ -113,6 +114,7 @@ export class HeartScene extends View {
         orbit: own(sceneKitUniform(material, 'orbit', { type: 'float2', range: [-.65, .65], units: ['radians', 'radians'], motion: 'spatial' })),
         ripple: scalar('ripple'),
         rippleOrigin: own(sceneKitUniform(material, 'rippleOrigin', { type: 'float3', range: [-4, 4], units: ['x', 'y', 'z'], motion: 'spatial' })),
+        pulsePower: own(sceneKitUniform(material, 'pulsePower', { type: 'float', range: [0, 1], units: ['fraction'], motion: 'appearance' })),
       })
     }
     this.controls.forEach(control => { control.formation.set(this.revealed); control.focus.set(this.focused ? 1 : 0) })
@@ -139,6 +141,11 @@ export class HeartScene extends View {
     this.heartbeat?.stop()
     this.heartbeat = undefined
     const active = this.running && !this.backgrounded && !reducedMotion()
+    for (const control of this.controls) {
+      if (active || this.backgrounded || reducedMotion()) control.pulsePower.set(active ? 1 : 0)
+      else this.scope?.add(control.pulsePower.animate(0, { duration: 180, ease: 'easeOut' }))
+    }
+    if (!active && !this.backgrounded && !reducedMotion()) this.renderFor(250)
     this.updateRendering()
     if (active && this.scope) this.heartbeat = this.scope.animate(this.clock, [0, 1], { duration: 60000 / this.bpm, ease: 'linear', repeat: Infinity })
   }

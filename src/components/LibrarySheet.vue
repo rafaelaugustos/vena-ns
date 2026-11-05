@@ -39,7 +39,7 @@ onBeforeUnmount(() => scope?.dispose())
       </StackLayout>
       <StackLayout v-else>
         <Label text="Some things are better felt." fontSize="18" color="#EAE0EB" marginBottom="13" />
-        <Label text="Move the pointer to part the body's particles. The heart stays whole and keeps beating. Click or tap the scene to send a wave of light through the torso." fontSize="14" color="#A69AAB" lineHeight="5" textWrap="true" />
+        <Label text="Each heartbeat sends a flash of light through the body. Click or tap for another. Move the pointer to part the body's particles while the heart stays whole." fontSize="14" color="#A69AAB" lineHeight="5" textWrap="true" />
         <Label text="These are sample rhythms. Vena does not measure heart rate or provide a medical reading." fontSize="12" color="#827589" lineHeight="4" textWrap="true" marginTop="24" />
         <Label text="Heart: BodyParts3D, © The Database Center for Life Science. CC BY 4.0. Adapted to a point cloud from OrganUI’s prepared model. Torso: MakeHuman, CC0." fontSize="10" color="#827589" textWrap="true" marginTop="16" @tap="Utils.openUrl('https://creativecommons.org/licenses/by/4.0/')" accessibilityLabel="Anatomy attribution and license" />
         <GridLayout columns="24,*" height="56" iosOverflowSafeArea="false" backgroundColor="#2B1722" borderRadius="18" padding="18" marginTop="26" @tap="emit('replay')" accessible="true" accessibilityRole="button" accessibilityLabel="Replay opening">
