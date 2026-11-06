@@ -1,22 +1,99 @@
-# Vena
+<p align="center">
+  <img src="resources/vena-icon.png" width="96" height="96" alt="Vena app icon" />
+</p>
 
-A heart made of light. Move the pointer across the anatomy, follow the pulse, or bring the heart into focus.
+<h1 align="center">Vena</h1>
 
-Vena is an iOS experiment built with NativeScript-Vue 3 and Jolt `0.1.0-rc.11`. Everything runs on the device. The three rhythms are samples; saved selections stay in local storage.
+<p align="center">An interactive heart made from 200,000 points of light.</p>
 
-<img src="resources/preview.png" alt="Vena running on the iPhone simulator" width="320" />
+<p align="center">
+  <a href="https://nativescript-vue.org/">NativeScript-Vue 3</a> ·
+  <a href="https://jolt.rafaelaugusto.dev/">Jolt RC.11</a> ·
+  SceneKit · iOS
+</p>
 
-## Run
+<p align="center">
+  <img src="resources/preview.gif" width="360" alt="Vena: light travels from the heart through the torso, followed by an extra pulse while the automatic rhythm is paused." />
+</p>
 
-Use Node 22, the NativeScript CLI, Xcode and CocoaPods on macOS.
+<p align="center"><sub>Recorded in the iPhone simulator. <a href="resources/preview.png">Still preview</a></sub></p>
+
+Move the mouse across the body and the particles part around it. The heart stays whole. Every beat sends a red wave out through the chest, fading to white as it travels. Click the heart for an extra pulse, or expand it to get a closer look.
+
+Vena is a small iOS motion experiment. Everything runs locally, including saved rhythms. The readings are sample data: the app does not measure heart rate or connect to HealthKit.
+
+## Run locally
+
+You need macOS, Node 22, the NativeScript CLI, Xcode with an iOS simulator, and CocoaPods. The project was built with NativeScript CLI 9.1.
 
 ```sh
+git clone https://github.com/rafaelaugustos/vena-ns.git
+cd vena-ns
 nvm use
 npm ci
 npm run ios
 ```
 
-To pick a simulator, pass its identifier with `npm run ios -- --device <udid>`. The native runner handles Homebrew CocoaPods' Ruby paths within its own process.
+To choose a simulator:
+
+```sh
+xcrun simctl list devices available
+npm run ios -- --device <simulator-udid>
+```
+
+The native runner handles Homebrew CocoaPods' Ruby paths inside its own process. Both Jolt packages are pinned to `0.1.0-rc.11`.
+
+### Mouse hover in the iPhone simulator
+
+An iPhone simulator normally treats mouse input as touch. To preview hover, leave the app open and run this in another terminal:
+
+```sh
+npm run pointer -- <simulator-udid>
+```
+
+Select the Vena window in Device Hub or Simulator, then move the mouse over the body. Allow macOS Accessibility access for the terminal if prompted. Stop the helper with Ctrl-C, and restart it after reinstalling the app.
+
+The helper maps the Mac cursor to the scene through a file in the simulator app's cache. It is restricted to development simulator builds. Native hover uses `UIHoverGestureRecognizer` on devices that support a pointer; the current preview was checked on the iPhone simulator with this helper.
+
+## Interaction
+
+| Action | Response |
+| --- | --- |
+| Move the pointer | The torso parts around it and the scene turns slightly. |
+| Click the heart | An extra beat sends a wave from the heart without resetting the rhythm. |
+| Click the torso | A wave spreads from the point you clicked. |
+| Pause | The automatic pulse stops. Hover and clicks still work. |
+| Expand | The heart fills the scene, with a control to bring the body back. |
+| Save | The selected rhythm stays in the local library. |
+
+The three samples run at **72**, **108**, and **58 BPM**. Tap **VENA** to replay the opening.
+
+## How it's built
+
+SceneKit draws the anatomy: 160,000 points for the torso and 40,000 for the heart, with an extra heart pass for the glow. The point clouds are sampled from meshes ahead of time and bundled as binary assets.
+
+Jolt drives the scene through typed shader uniforms. A repeating `motionValue` sets the heartbeat phase; the shader uses that phase for the heart's movement and the red-to-white wave. Clicks have their own pulse animation, so they can overlap the automatic beat. Springs handle focus, rotation and pointer response.
+
+The interface uses Jolt timelines for the opening and reveals, `press` for button feedback, and `shape` for the icons and LED signal. Motion scopes own playback. The scene stops rendering in the background, and Reduce Motion disables continuous movement.
+
+There is no JavaScript loop updating each particle. The anatomy, hit testing and shader math belong to the app; Jolt controls the animation parameters.
+
+```text
+src/
+  components/    Cards, controls, opening overlay and library
+  composables/   Selected rhythm and local persistence
+  domain/        Sample sessions and signal data
+  motion/        Opening and interface timelines
+  scene/         Native rendering, shaders, pointer input and icons
+  assets/        Bundled anatomy point clouds
+scripts/         Native runner, simulator pointer helper and asset exporters
+resources/       Preview, icon source and anatomy attribution
+tests/           Data validation and heart hit testing
+```
+
+The current scene targets iOS. Android scaffolding is included, but it does not implement the same particle scene. There is no Web app in this repository.
+
+## Checks
 
 ```sh
 npm run typecheck
@@ -24,35 +101,12 @@ npm test
 npm run build:ios
 ```
 
-## Pointer interaction
+The tests validate saved data, the signal function, bundled point clouds, and heart hit testing during focus, rotation and pulse. Visual changes also need a simulator check; these tests do not measure rendering performance.
 
-Each heartbeat sends a red flash out from the heart, turning white as it crosses the torso. Clicking the heart adds a beat and another wave without restarting the rhythm. Clicking elsewhere sends a wave from that spot. Pausing fades out the automatic flash; clicks still work. Hover parts the torso's particles while the heart stays intact.
+## Credits
 
-The scene uses `UIHoverGestureRecognizer`: moving a pointer is enough; it does not depend on a tap or drag. Test this on an iPad simulator with pointer simulation enabled, or an iPad with a mouse or trackpad. An iPhone simulator's ordinary mouse input is emulated touch and does not produce the same hover events. See [Apple's hover recognizer documentation](https://developer.apple.com/documentation/uikit/uihovergesturerecognizer).
+- **Heart:** BodyParts3D, © The Database Center for Life Science, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), adapted from OrganUI's prepared model. [Attribution and modifications](resources/anatomy/HEART-ATTRIBUTION.md).
+- **Torso:** MakeHuman `hm08`, CC0. [Sources and export instructions](resources/anatomy/README.md).
+- **App icon:** generated artwork. The [source image](resources/vena-icon.png) and [generation prompt](resources/icon-prompt.txt) are included. `npm run icons` rebuilds the app icons and launch artwork with ImageMagick.
 
-For mouse hover in the **iPhone simulator**, run this in a second terminal after opening the app:
-
-```sh
-npm run pointer -- <simulator-udid>
-```
-
-Select that simulator in Device Hub or Simulator, then move the mouse over the body. The helper maps the Mac cursor to the scene using its actual layout, including zoom and window resizing. It uses a small file in the simulator app's cache directory; no server is involved. macOS Accessibility access is required for the terminal. Stop it with Ctrl-C. This input path is restricted to development simulator builds; physical iPads use native hover.
-
-Android scaffolding is present from the initial setup; the current anatomy and visual work target iOS.
-
-## How it moves
-
-- SceneKit renders 200,000 anatomy points: 160,000 for the torso and 40,000 for the heart. Jolt's native shader properties drive formation, focus, rotation, torso displacement, lighting and the tap wave.
-- A repeating Jolt motion value drives both the heartbeat and its recurring light wave. Tap waves have their own native animation. There is no JavaScript animation loop moving individual particles.
-- Jolt shapes draw the icons and LED signal. Timelines bring in the interface, while springs handle focus and control feedback.
-- Motion scopes own the animations. Backgrounding stops scene rendering, and Reduce Motion disables continuous movement. Pausing the rhythm still allows pointer and focus transitions.
-
-`src/components` contains the interface, `src/domain` the sample data, `src/composables` local state, and `src/scene` native rendering. The anatomy exporters live in `scripts`; their binary outputs are bundled with the app.
-
-## Artwork and anatomy
-
-The icon source is [resources/vena-icon.png](resources/vena-icon.png), created with the built-in image generation tool. Its generation prompt is kept in [resources/icon-prompt.txt](resources/icon-prompt.txt). Run `npm run icons` to rebuild the platform icons and launch artwork from it; this export step requires ImageMagick.
-
-Heart anatomy: **BodyParts3D, © The Database Center for Life Science**, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), adapted from OrganUI's prepared model. Torso: MakeHuman `hm08`, CC0. Sources, export steps and modification notices are in [resources/anatomy](resources/anatomy/README.md).
-
-Vena does not measure heart rate or provide medical readings.
+Keep the anatomy attribution with redistributed models and images of them.
