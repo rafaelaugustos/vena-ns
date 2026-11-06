@@ -20,7 +20,7 @@ test('the pulse is periodic and remains bounded across the strip', () => {
 })
 
 test('bundled anatomy decodes into complete, finite surface points', () => {
-  for (const [name, expectedCount] of [['torso', 61000], ['heart', 11500]] as const) {
+  for (const [name, expectedCount] of [['torso', 160000], ['heart', 40000]] as const) {
     const bytes = readFileSync(new URL(`../src/assets/anatomy/${name}.bin`, import.meta.url))
     const cloud = decodeCloud(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength))
     const count = cloud.positions.length / 3

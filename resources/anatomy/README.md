@@ -6,9 +6,9 @@ The torso is sampled from MakeHuman's `hm08` base mesh, released under CC0 in Se
 - License: [MAKEHUMAN-LICENSE.md](MAKEHUMAN-LICENSE.md)
 - Export: `python3 scripts/sample-torso.py path/to/base.obj`
 
-The torso has 61,000 surface points. Its shading comes from the mesh normals; a fixed random seed keeps the export reproducible.
+The torso has 160,000 surface points. Its shading comes from the mesh normals; a fixed random seed keeps the export reproducible.
 
-The heart uses BodyParts3D anatomy prepared as a GLB by OrganUI. The exporter samples 11,500 points from the external surfaces, excludes the ventricular cavities, scales and positions the result inside the torso, and replaces the original colors with red lighting values. The app adds animated deformation and lighting.
+The heart uses BodyParts3D anatomy prepared as a GLB by OrganUI. The exporter samples 40,000 points from the external surfaces, excludes the ventricular cavities, scales and positions the result inside the torso, and replaces the original colors with red lighting values. The app adds animated deformation and lighting.
 
 - Pinned input: [OrganUI heart.glb](https://github.com/organui/heart-3d/blob/c72ce6654ff8e282942f97750d3104f55ef4fc3d/public/models/heart.glb)
 - Attribution and license: [HEART-ATTRIBUTION.md](HEART-ATTRIBUTION.md)

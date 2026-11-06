@@ -26,7 +26,7 @@ npm run build:ios
 
 ## Pointer interaction
 
-Each heartbeat sends a flash of light through the torso, at the selected rhythm's tempo. Clicking or tapping sends an additional wave immediately, without restarting the automatic cycle. Pausing fades out the automatic flash; taps still work. Hover parts the torso's particles while the heart stays intact.
+Each heartbeat sends a red flash out from the heart, turning white as it crosses the torso. Clicking the heart adds a beat and another wave without restarting the rhythm. Clicking elsewhere sends a wave from that spot. Pausing fades out the automatic flash; clicks still work. Hover parts the torso's particles while the heart stays intact.
 
 The scene uses `UIHoverGestureRecognizer`: moving a pointer is enough; it does not depend on a tap or drag. Test this on an iPad simulator with pointer simulation enabled, or an iPad with a mouse or trackpad. An iPhone simulator's ordinary mouse input is emulated touch and does not produce the same hover events. See [Apple's hover recognizer documentation](https://developer.apple.com/documentation/uikit/uihovergesturerecognizer).
 
@@ -42,7 +42,7 @@ Android scaffolding is present from the initial setup; the current anatomy and v
 
 ## How it moves
 
-- SceneKit renders 72,500 anatomy points. Jolt's native shader properties drive formation, focus, rotation, torso displacement, lighting and the tap wave.
+- SceneKit renders 200,000 anatomy points: 160,000 for the torso and 40,000 for the heart. Jolt's native shader properties drive formation, focus, rotation, torso displacement, lighting and the tap wave.
 - A repeating Jolt motion value drives both the heartbeat and its recurring light wave. Tap waves have their own native animation. There is no JavaScript animation loop moving individual particles.
 - Jolt shapes draw the icons and LED signal. Timelines bring in the interface, while springs handle focus and control feedback.
 - Motion scopes own the animations. Backgrounding stops scene rendering, and Reduce Motion disables continuous movement. Pausing the rhythm still allows pointer and focus transitions.

@@ -11,7 +11,7 @@ BodyParts3D, © The Database Center for Life Science licensed under CC Attributi
 
 Changes by OrganUI: selected meshes, grouped meshes by source concept, triangulated faces, recentered and uniformly scaled coordinates, changed axes from Z-up to Y-up, recomputed smooth normals, assigned illustrative colors, and converted OBJ to GLB. No further decimation or invented anatomy. The two ventricular walls remain one mesh; separate cavity surfaces represent interior spaces, not muscle tissue.
 
-Changes by Vena: sampled 11,500 points from the external surfaces, omitted the two cavity meshes, scaled and translated the coordinates, assigned red RGBA values, and exported a binary point cloud. Runtime shaders add illustrative pulse, pointer displacement and lighting. These effects are artistic, not a physiological simulation.
+Changes by Vena: sampled 40,000 points from the external surfaces, omitted the two cavity meshes, scaled and translated the coordinates, assigned red RGBA values, and exported a binary point cloud. Runtime shaders add illustrative pulse, pointer displacement and lighting. These effects are artistic, not a physiological simulation.
 
 Legacy OBJ headers cite CC BY-SA 2.1 Japan and link to the same official archive license URL. This distribution relies on the archive's current CC BY 4.0 grant. OrganUI documents the discrepancy in its [model provenance](https://github.com/organui/heart-3d/blob/c72ce6654ff8e282942f97750d3104f55ef4fc3d/docs/MODEL_PROVENANCE.md).
 

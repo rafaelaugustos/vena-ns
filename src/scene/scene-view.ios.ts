@@ -4,6 +4,7 @@ import { sceneKitUniform, type NativeProperty } from '@rafaelaugusto/jolt/native
 import { decodeCloud, type PointCloud } from './cloud-data'
 import { observePointer } from './pointer.ios'
 import { anatomyShader } from './shaders'
+import { hitsHeart } from './heart-space'
 
 interface Controls {
   formation: NativeProperty<number>
@@ -14,6 +15,8 @@ interface Controls {
   ripple: NativeProperty<number>
   rippleOrigin: NativeProperty<readonly [number, number, number]>
   pulsePower: NativeProperty<number>
+  heartTap: NativeProperty<number>
+  rippleFromHeart: NativeProperty<number>
 }
 
 function source(values: number[], semantic: string, components: number) {
@@ -30,12 +33,12 @@ function pointNode(cloud: PointCloud, isHeart: boolean, glow = false) {
   const element = SCNGeometryElement.geometryElementWithDataPrimitiveTypePrimitiveCountBytesPerIndex(
     NSData.dataWithBytesLength(indices.buffer, indices.byteLength), SCNGeometryPrimitiveType.Point, count, 4,
   )
-  element.pointSize = glow ? 8 : isHeart ? 2.8 : 1.9
-  element.minimumPointScreenSpaceRadius = glow ? 3 : isHeart ? .85 : .5
-  element.maximumPointScreenSpaceRadius = glow ? 4 : isHeart ? 1.4 : .95
+  element.pointSize = glow ? 8 : isHeart ? 2 : 1.4
+  element.minimumPointScreenSpaceRadius = glow ? 3 : isHeart ? .6 : .35
+  element.maximumPointScreenSpaceRadius = glow ? 4 : isHeart ? 1 : .7
   const geometry = SCNGeometry.geometryWithSourcesElements([
     source(cloud.positions, SCNGeometrySourceSemanticVertex, 3),
-    source(glow ? cloud.colors.map((v, i) => i % 4 === 3 ? v * .035 : v) : cloud.colors, SCNGeometrySourceSemanticColor, 4),
+    source(glow ? cloud.colors.map((v, i) => i % 4 === 3 ? v * .014 : v) : cloud.colors, SCNGeometrySourceSemanticColor, 4),
   ], [element])
   const material = SCNMaterial.material()
   material.lightingModelName = SCNLightingModelConstant
@@ -45,7 +48,7 @@ function pointNode(cloud: PointCloud, isHeart: boolean, glow = false) {
   material.readsFromDepthBuffer = false
   material.writesToDepthBuffer = false
   material.shaderModifiers = NSDictionary.dictionaryWithObjectForKey(anatomyShader, SCNShaderModifierEntryPointGeometry)
-  for (const [key, value] of Object.entries({ formation: 0, beat: 0, pulsePower: 0, isHeart: isHeart ? 1 : 0, focus: 1, touchPower: 0, ripple: 1 })) material.setValueForKey(value, key)
+  for (const [key, value] of Object.entries({ formation: 0, beat: 0, pulsePower: 0, isHeart: isHeart ? 1 : 0, focus: 1, touchPower: 0, ripple: 1, heartTap: 1, rippleFromHeart: 0 })) material.setValueForKey(value, key)
   material.setValueForKey(NSValue.valueWithSCNVector3({ x: 0, y: 0, z: 0 }), 'touchPosition')
   material.setValueForKey(NSValue.valueWithSCNVector3({ x: 0, y: 0, z: 0 }), 'rippleOrigin')
   material.setValueForKey(NSValue.valueWithCGPoint(CGPointMake(0, 0)), 'orbit')
@@ -56,6 +59,7 @@ function pointNode(cloud: PointCloud, isHeart: boolean, glow = false) {
 /** SceneKit draws the cloud; Jolt writes the shader inputs on the native clock. */
 export class HeartScene extends View {
   private materials: SCNMaterial[] = []
+  private heartPoints: number[] = []
   private controls: Controls[] = []
   private properties: Array<{ dispose(): void }> = []
   private scope?: MotionScope
@@ -88,6 +92,7 @@ export class HeartScene extends View {
     scene.rootNode.addChildNode(camera)
     const load = (name: string) => decodeCloud(interop.bufferFromData(File.fromPath(`${knownFolders.currentApp().path}/assets/anatomy/${name}.bin`).readSync() as NSData))
     const body = load('torso'), heart = load('heart')
+    this.heartPoints = heart.positions
     for (const [cloud, red, glow] of [[body, false, false], [heart, true, true], [heart, true, false]] as const) {
       const built = pointNode(cloud, red, glow)
       scene.rootNode.addChildNode(built.node)
@@ -115,6 +120,7 @@ export class HeartScene extends View {
         ripple: scalar('ripple'),
         rippleOrigin: own(sceneKitUniform(material, 'rippleOrigin', { type: 'float3', range: [-4, 4], units: ['x', 'y', 'z'], motion: 'spatial' })),
         pulsePower: own(sceneKitUniform(material, 'pulsePower', { type: 'float', range: [0, 1], units: ['fraction'], motion: 'appearance' })),
+        heartTap: scalar('heartTap'), rippleFromHeart: scalar('rippleFromHeart'),
       })
     }
     this.controls.forEach(control => { control.formation.set(this.revealed); control.focus.set(this.focused ? 1 : 0) })
@@ -174,12 +180,21 @@ export class HeartScene extends View {
   tapAt(x: number, y: number) {
     if (!this.interactionEnabled || this.backgrounded || reducedMotion()) return
     const point = this.scenePoint(x, y)
-    if (!point || !this.scope) return
+    const pose = this.controls[0]
+    if (!point || !this.scope || !pose) return
+    const onHeart = hitsHeart(this.heartPoints, point, 7 * 3.24 / this.getActualSize().height, {
+      beat: this.clock.get(), heartTap: pose.heartTap.get(), focus: pose.focus.get(), orbit: pose.orbit.get(),
+    })
     this.renderFor(950)
     for (const control of this.controls) {
       control.rippleOrigin.set(point)
+      control.rippleFromHeart.set(onHeart ? 1 : 0)
       control.ripple.set(0)
       this.scope.add(control.ripple.animate(1, { duration: 850, ease: 'linear' }))
+      if (onHeart) {
+        control.heartTap.set(0)
+        this.scope.add(control.heartTap.animate(1, { duration: 680, ease: 'linear' }))
+      }
     }
   }
   pointerAt(x: number, y: number, active: boolean) {
@@ -222,6 +237,7 @@ export class HeartScene extends View {
     const native = this.nativeViewProtected as SCNView | undefined
     if (native) native.scene = null
     this.materials = []
+    this.heartPoints = []
     super.disposeNativeView()
   }
 }

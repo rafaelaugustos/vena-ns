@@ -42,7 +42,7 @@ for mesh in gltf['meshes']:
 
 rng = random.Random(27)
 points = []
-for _ in range(11500):
+for _ in range(40000):
     p, n = triangles[bisect.bisect(areas, rng.random()*total)]
     u, v = math.sqrt(rng.random()), rng.random()
     w = (1-u, u*(1-v), u*v)
@@ -51,7 +51,7 @@ for _ in range(11500):
     light = .4 + max(0, normal[2])*.6
     intensity = .65 + rng.random()*.35
     points.append((position[0]*.26+.2, position[1]*.26+.42, position[2]*.26+.55,
-                   intensity, .025+light*.09, .09+light*.12, .25+light*.65))
+                   intensity, .012+light*.045, .025+light*.07, .25+light*.65))
 
 out = root / 'src/assets/anatomy/heart.bin'
 out.write_bytes(b''.join(struct.pack('<7f', *p) for p in points))

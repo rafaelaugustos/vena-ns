@@ -62,7 +62,7 @@ for i, n in enumerate(normals):
 
 rng = random.Random(19)
 points = []
-while len(points) < 61000:
+while len(points) < 160000:
     tri = triangles[bisect.bisect(areas, rng.random() * total)]
     u, v = math.sqrt(rng.random()), rng.random()
     weights = (1-u, u*(1-v), u*v)
